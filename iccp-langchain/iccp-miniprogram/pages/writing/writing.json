@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "内容创作",
+  "usingComponents": {
+    "category-picker": "/components/category-picker/category-picker",
+    "loading-overlay": "/components/loading-overlay/loading-overlay"
+  }
+}

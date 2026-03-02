@@ -1,0 +1,63 @@
+# -----------------------------------------------------------------------------
+# Version strategy: LangChain 5 packages are pinned to one compatible set to
+# avoid resolver conflicts. Other packages use ranges. To get a full lock file
+# run: pip install pip-tools && pip-compile requirements.txt -o requirements.lock
+# -----------------------------------------------------------------------------
+
+# Web framework (anyio 4.x compatible)
+fastapi>=0.115.0,<0.116.0
+uvicorn[standard]>=0.35.0
+pydantic>=2.11.0,<3.0.0
+pydantic-settings>=2.5.2
+email-validator>=2.2.0
+
+# LangChain/LangGraph: keep them in one compatible generation
+langchain-core>=0.3.66,<1.0.0
+langgraph>=0.2.60,<0.3.0
+langchain==0.3.26
+langchain-openai==0.2.14
+langchain-community==0.3.26
+
+# LangChain tools
+tavily-python>=0.7.0
+duckduckgo-search==4.1.1
+
+# Database
+sqlalchemy==2.0.23
+aiosqlite>=0.20.0
+alembic==1.12.1
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+pymilvus==2.3.4
+
+# LLM (tiktoken>=0.7 required by langchain-openai 0.2.14)
+openai>=1.6.1,<2.0.0
+tiktoken>=0.7,<1
+
+# Async tasks
+celery==5.3.4
+
+# Utils (relaxed versions for faster pip resolve)
+httpx>=0.28.1
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.9
+anyio>=4.5  # MCP dependency fix
+
+# Monitoring and logging
+prometheus-client>=0.21.1
+python-json-logger==2.0.7
+
+# Dev tools
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+
+# --- How to avoid conflicts ---
+# 1. LangChain: keep the 5 packages on one "stack" (all 0.3 core here); do not
+#    mix langchain-core 0.2.x with langchain-openai 0.2.x (openai 0.2 needs core 0.3).
+# 2. Prefer exact pins (==) for the LangChain block; relax one at a time when
+#    upgrading and run: pip install -r requirements.txt
+# 3. For full reproducibility: pip install pip-tools && pip-compile requirements.txt -o requirements.lock
+#    then install with: pip install -r requirements.lock

@@ -1,0 +1,142 @@
+.hero-card {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border-radius: 24rpx;
+  padding: 48rpx 36rpx;
+  margin-bottom: 32rpx;
+}
+
+.hero-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-greeting {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 8rpx;
+}
+
+.hero-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12rpx;
+}
+
+.hero-desc {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+}
+
+/* 快捷入口 */
+.quick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  margin-bottom: 32rpx;
+}
+
+.quick-item {
+  width: calc(50% - 10rpx);
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx 24rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  box-sizing: border-box;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.quick-icon {
+  font-size: 48rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.quick-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2937;
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.quick-desc {
+  font-size: 22rpx;
+  color: #9ca3af;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 最近创作 */
+.recent-item {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.recent-left {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 16rpx;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.recent-icon {
+  font-size: 36rpx;
+}
+
+.recent-center {
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-topic {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1f2937;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-bottom: 8rpx;
+}
+
+.recent-meta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.recent-time {
+  font-size: 22rpx;
+  color: #9ca3af;
+}
+
+.recent-right {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+
+.recent-arrow {
+  font-size: 36rpx;
+  color: #d1d5db;
+}

@@ -1,0 +1,32 @@
+<view class="container">
+  <view wx:if="{{empty && !loading}}" class="empty-state">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无创作记录</text>
+    <text class="empty-sub">去创作页生成你的第一篇内容吧</text>
+  </view>
+
+  <view
+    wx:for="{{items}}"
+    wx:key="id"
+    class="history-item"
+    bindtap="onItemTap"
+    data-id="{{item.id}}"
+  >
+    <view class="hist-left">
+      <view class="hist-icon-wrap" style="background: {{item.cat.color}}20;">
+        <text class="hist-icon">{{item.cat.icon}}</text>
+      </view>
+    </view>
+    <view class="hist-center">
+      <text class="hist-topic">{{item.topicShort}}</text>
+      <view class="hist-meta">
+        <text class="tag">{{item.cat.name}}</text>
+        <text class="hist-agent">{{item.agent}}</text>
+        <text class="hist-time">{{item.timeLabel}}</text>
+      </view>
+    </view>
+    <view class="hist-right">
+      <text class="hist-arrow">›</text>
+    </view>
+  </view>
+</view>

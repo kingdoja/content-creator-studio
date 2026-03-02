@@ -1,0 +1,89 @@
+<view class="container">
+  <!-- 结果展示 -->
+  <view wx:if="{{showResult}}" class="result-section">
+    <!-- 错误展示 -->
+    <view wx:if="{{errorMsg}}" class="card error-card">
+      <text class="error-icon">⚠️</text>
+      <text class="error-text">{{errorMsg}}</text>
+      <button class="btn-primary" style="margin-top: 32rpx;" bindtap="handleReset">返回重试</button>
+    </view>
+
+    <!-- 成功结果 -->
+    <view wx:elif="{{result}}" class="card">
+      <view class="flex-between" style="margin-bottom: 20rpx;">
+        <text class="card-title">创作完成</text>
+        <view class="result-meta">
+          <text class="tag">{{result.agent}}</text>
+          <text class="meta-iter">{{result.iterations}} 轮</text>
+        </view>
+      </view>
+
+      <view wx:if="{{result.toolsUsed.length > 0}}" class="tools-row">
+        <text class="tools-label">工具：</text>
+        <text wx:for="{{result.toolsUsed}}" wx:key="*this" class="tag tool-tag">{{item}}</text>
+      </view>
+
+      <view class="result-content">
+        <text selectable="true">{{result.content}}</text>
+      </view>
+
+      <view class="result-actions">
+        <button class="btn-primary" bindtap="handleCopy">复制内容</button>
+        <button class="btn-outline" bindtap="handleReset">重新创作</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 创作表单 -->
+  <view wx:else>
+    <view class="section-title">选择板块</view>
+    <view class="card" style="padding: 24rpx;">
+      <category-picker selected="{{category}}" bind:change="onCategoryChange" />
+    </view>
+
+    <view class="section-title">创作主题</view>
+    <view class="card">
+      <textarea
+        class="topic-input"
+        value="{{topic}}"
+        bindinput="onTopicInput"
+        placeholder="输入你想创作的主题，如：2025年AI发展趋势分析"
+        maxlength="500"
+        auto-height
+      />
+    </view>
+
+    <view class="section-title">额外要求（可选）</view>
+    <view class="card">
+      <textarea
+        class="req-input"
+        value="{{requirements}}"
+        bindinput="onRequirementsInput"
+        placeholder="补充特殊要求，如：需要包含数据对比、面向初学者"
+        maxlength="500"
+        auto-height
+      />
+    </view>
+
+    <view class="options-row">
+      <view class="option-item">
+        <text class="option-label">长度</text>
+        <picker bindchange="onLengthChange" range="{{lengthLabels}}" value="{{lengthIndex}}">
+          <view class="option-picker">{{lengthLabels[lengthIndex]}} ▾</view>
+        </picker>
+      </view>
+      <view class="option-item">
+        <text class="option-label">风格</text>
+        <picker bindchange="onStyleChange" range="{{styleLabels}}" value="{{styleIndex}}">
+          <view class="option-picker">{{styleLabels[styleIndex]}} ▾</view>
+        </picker>
+      </view>
+    </view>
+
+    <button class="btn-primary generate-btn" bindtap="handleGenerate" disabled="{{loading || !canGenerate}}">
+      开始创作
+    </button>
+  </view>
+
+  <loading-overlay visible="{{loading}}" />
+</view>

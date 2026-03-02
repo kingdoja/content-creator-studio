@@ -1,0 +1,176 @@
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+/* 顶部栏 */
+.chat-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 24rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #e5e7eb;
+  position: relative;
+  z-index: 10;
+}
+
+.session-selector {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 20rpx;
+  background: #f3f4f6;
+  border-radius: 12rpx;
+  max-width: 50%;
+}
+
+.session-label {
+  font-size: 26rpx;
+  color: #374151;
+  max-width: 240rpx;
+}
+
+.session-arrow {
+  font-size: 22rpx;
+  color: #9ca3af;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.topbar-btn {
+  font-size: 24rpx;
+  padding: 10rpx 24rpx;
+  border-radius: 12rpx;
+  background: #6366f1;
+  color: #fff;
+}
+
+/* 会话下拉 */
+.session-dropdown {
+  position: absolute;
+  top: 100rpx;
+  left: 24rpx;
+  right: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  max-height: 400rpx;
+  overflow-y: auto;
+  padding: 8rpx 0;
+}
+
+.session-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 20rpx 28rpx;
+  border-bottom: 1rpx solid #f3f4f6;
+}
+
+.session-option.active {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.session-option-text {
+  font-size: 26rpx;
+  color: #374151;
+  flex: 1;
+}
+
+.session-delete-btn {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 12rpx;
+  background: #fff1f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.session-delete-icon {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+.session-option.active .session-option-text {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+/* 消息列表 */
+.msg-list {
+  flex: 1;
+  padding: 24rpx 8rpx;
+  overflow-y: auto;
+}
+
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  font-size: 30rpx;
+  color: #6b7280;
+  margin-bottom: 8rpx;
+}
+
+.empty-sub {
+  font-size: 24rpx;
+  color: #9ca3af;
+}
+
+/* 输入栏 */
+.input-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid #e5e7eb;
+}
+
+.msg-input {
+  flex: 1;
+  height: 72rpx;
+  background: #f3f4f6;
+  border-radius: 36rpx;
+  padding: 0 28rpx;
+  font-size: 28rpx;
+  color: #1f2937;
+}
+
+.send-btn {
+  width: 120rpx;
+  height: 72rpx;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border-radius: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.send-btn.disabled {
+  opacity: 0.5;
+}

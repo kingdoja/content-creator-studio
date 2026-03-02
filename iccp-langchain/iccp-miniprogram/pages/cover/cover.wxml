@@ -1,0 +1,72 @@
+<view class="container">
+  <!-- 结果展示 -->
+  <view wx:if="{{showResult}}" class="result-section">
+    <view wx:if="{{errorMsg}}" class="card error-card">
+      <text class="error-icon">⚠️</text>
+      <text class="error-text">{{errorMsg}}</text>
+      <button class="btn-primary" style="margin-top: 32rpx;" bindtap="handleReset">返回重试</button>
+    </view>
+
+    <view wx:elif="{{result}}" class="card">
+      <view class="flex-between" style="margin-bottom: 20rpx;">
+        <text class="card-title">封面已生成</text>
+        <text class="tag">{{result.model}}</text>
+      </view>
+
+      <view class="cover-preview">
+        <image
+          class="cover-image"
+          src="{{result.imageUrl}}"
+          mode="widthFix"
+          show-menu-by-longpress="{{true}}"
+        />
+      </view>
+
+      <view wx:if="{{result.promptUsed}}" class="prompt-row">
+        <text class="prompt-label">生成提示词：</text>
+        <text class="prompt-text" selectable="true">{{result.promptUsed}}</text>
+      </view>
+
+      <view class="result-actions">
+        <button class="btn-primary" bindtap="handleSaveImage">保存到相册</button>
+        <button class="btn-outline" bindtap="handleReset">重新生成</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 表单 -->
+  <view wx:else>
+    <view class="section-title">文章标题</view>
+    <view class="card">
+      <textarea
+        class="title-input"
+        value="{{title}}"
+        bindinput="onTitleInput"
+        placeholder="输入文章标题，如：AI 正在重塑软件开发的未来"
+        maxlength="200"
+        auto-height
+      />
+    </view>
+
+    <view class="options-row">
+      <view class="option-item">
+        <text class="option-label">视觉风格</text>
+        <picker bindchange="onStyleChange" range="{{styleLabels}}" value="{{styleIndex}}">
+          <view class="option-picker">{{styleLabels[styleIndex]}} ▾</view>
+        </picker>
+      </view>
+      <view class="option-item">
+        <text class="option-label">色调</text>
+        <picker bindchange="onToneChange" range="{{toneLabels}}" value="{{toneIndex}}">
+          <view class="option-picker">{{toneLabels[toneIndex]}} ▾</view>
+        </picker>
+      </view>
+    </view>
+
+    <button class="btn-primary generate-btn" bindtap="handleGenerate" disabled="{{loading || !canGenerate}}">
+      生成封面图
+    </button>
+  </view>
+
+  <loading-overlay visible="{{loading}}" text="正在生成封面图..." subtext="预计需要 10-30 秒" />
+</view>

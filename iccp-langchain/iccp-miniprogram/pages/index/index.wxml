@@ -1,0 +1,60 @@
+<view class="container">
+  <!-- 顶部欢迎 -->
+  <view class="hero-card">
+    <view class="hero-text">
+      <text class="hero-greeting">{{greeting}} 👋</text>
+      <text class="hero-title">ICCP 智能创作平台</text>
+      <text class="hero-desc">多 Agent 协作，7 大板块一键生成高质量内容</text>
+    </view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="section-title">快捷操作</view>
+  <view class="quick-grid">
+    <view
+      wx:for="{{quickActions}}"
+      wx:key="id"
+      class="quick-item"
+      bindtap="onQuickAction"
+      data-url="{{item.url}}"
+    >
+      <text class="quick-icon">{{item.icon}}</text>
+      <view class="quick-info">
+        <text class="quick-title">{{item.title}}</text>
+        <text class="quick-desc">{{item.desc}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 板块选择 -->
+  <view class="section-title">选择板块开始创作</view>
+  <view class="card">
+    <category-picker selected="" bind:change="onCategoryChange" />
+  </view>
+
+  <!-- 最近创作 -->
+  <view wx:if="{{recentItems.length > 0}}">
+    <view class="section-title">最近创作</view>
+    <view
+      wx:for="{{recentItems}}"
+      wx:key="id"
+      class="recent-item"
+      bindtap="onRecentTap"
+      data-id="{{item.id}}"
+    >
+      <view class="recent-left">
+        <text class="recent-icon">{{item.categoryInfo.icon}}</text>
+      </view>
+      <view class="recent-center">
+        <text class="recent-topic">{{item.topicShort}}</text>
+        <view class="recent-meta">
+          <text class="tag">{{item.categoryInfo.name}}</text>
+          <text class="recent-time">{{item.timeLabel}}</text>
+        </view>
+      </view>
+      <view class="recent-right">
+        <text class="recent-arrow">›</text>
+      </view>
+    </view>
+  </view>
+</view>

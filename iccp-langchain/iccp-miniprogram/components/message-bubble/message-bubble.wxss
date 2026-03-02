@@ -1,0 +1,75 @@
+.bubble-wrap {
+  display: flex;
+  margin-bottom: 24rpx;
+  padding: 0 16rpx;
+}
+
+.bubble-right {
+  flex-direction: row-reverse;
+}
+
+.bubble-left {
+  flex-direction: row;
+}
+
+.bubble-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar-icon {
+  font-size: 32rpx;
+}
+
+.bubble-body {
+  max-width: 75%;
+  padding: 20rpx 28rpx;
+  border-radius: 20rpx;
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+.bubble-right .bubble-body {
+  margin-right: 16rpx;
+}
+
+.bubble-left .bubble-body {
+  margin-left: 16rpx;
+}
+
+.user-body {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+  border-top-right-radius: 6rpx;
+}
+
+.ai-body {
+  background: #ffffff;
+  color: #1f2937;
+  border: 1rpx solid #e5e7eb;
+  border-top-left-radius: 6rpx;
+}
+
+.bubble-text {
+  font-size: 28rpx;
+}
+
+.bubble-meta {
+  margin-top: 12rpx;
+  display: flex;
+  gap: 8rpx;
+}
+
+.meta-tag {
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 12rpx;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}

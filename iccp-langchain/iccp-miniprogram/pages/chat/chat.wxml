@@ -1,0 +1,70 @@
+<view class="chat-page">
+  <!-- 顶部操作栏 -->
+  <view class="chat-topbar">
+    <view class="session-selector" bindtap="toggleSessionPicker">
+      <text class="session-label ellipsis">
+        {{sessions.length > 0 ? currentTitle : '无会话'}}
+      </text>
+      <text class="session-arrow">▾</text>
+    </view>
+    <view class="topbar-actions">
+      <view class="topbar-btn" bindtap="handleNewSession">+ 新建</view>
+    </view>
+  </view>
+
+  <!-- 会话选择浮层 -->
+  <view wx:if="{{showSessionPicker}}" class="session-dropdown">
+    <view
+      wx:for="{{sessions}}"
+      wx:key="id"
+      class="session-option {{sessionId === item.id ? 'active' : ''}}"
+      bindtap="onSelectSession"
+      data-id="{{item.id}}"
+    >
+      <text class="session-option-text ellipsis">{{item.title || '新会话'}}</text>
+      <view class="session-delete-btn" catchtap="onDeleteSession" data-id="{{item.id}}">
+        <text class="session-delete-icon">🗑️</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 消息列表 -->
+  <scroll-view
+    class="msg-list"
+    scroll-y
+    scroll-into-view="{{scrollToView}}"
+    scroll-with-animation
+  >
+    <view wx:if="{{messages.length === 0}}" class="empty-hint">
+      <text class="empty-icon">💬</text>
+      <text class="empty-text">输入主题开始对话创作</text>
+      <text class="empty-sub">例如：写一篇关于 AI 产品冷启动的实战指南</text>
+    </view>
+    <view wx:for="{{messages}}" wx:key="index" id="msg-{{index}}">
+      <message-bubble
+        role="{{item.role}}"
+        text="{{item.text}}"
+        agent="{{item.agent}}"
+      />
+    </view>
+    <view style="height: 20rpx;"></view>
+  </scroll-view>
+
+  <!-- 底部输入栏 -->
+  <view class="input-bar">
+    <input
+      class="msg-input"
+      value="{{inputValue}}"
+      placeholder="输入你的创作需求..."
+      confirm-type="send"
+      bindinput="onInputChange"
+      bindconfirm="onInputConfirm"
+      disabled="{{loading}}"
+    />
+    <view class="send-btn {{loading ? 'disabled' : ''}}" bindtap="handleSend">
+      <text>{{loading ? '...' : '发送'}}</text>
+    </view>
+  </view>
+
+  <loading-overlay visible="{{loading}}" text="AI 正在思考中..." subtext="请耐心等待" />
+</view>

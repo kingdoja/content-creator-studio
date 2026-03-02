@@ -1,0 +1,11 @@
+<view wx:if="{{visible}}" class="overlay">
+  <view class="overlay-card">
+    <view class="spinner">
+      <view class="dot dot1"></view>
+      <view class="dot dot2"></view>
+      <view class="dot dot3"></view>
+    </view>
+    <text class="overlay-text">{{text}}</text>
+    <text class="overlay-sub">{{subtext}}</text>
+  </view>
+</view>

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "AI 对话",
+  "usingComponents": {
+    "message-bubble": "/components/message-bubble/message-bubble",
+    "loading-overlay": "/components/loading-overlay/loading-overlay"
+  }
+}

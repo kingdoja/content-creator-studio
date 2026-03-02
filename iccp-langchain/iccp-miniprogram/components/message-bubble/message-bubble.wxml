@@ -1,0 +1,11 @@
+<view class="bubble-wrap {{role === 'user' ? 'bubble-right' : 'bubble-left'}}">
+  <view class="bubble-avatar">
+    <text class="avatar-icon">{{role === 'user' ? '👤' : '🤖'}}</text>
+  </view>
+  <view class="bubble-body {{role === 'user' ? 'user-body' : 'ai-body'}}">
+    <text class="bubble-text" selectable="true">{{text}}</text>
+    <view wx:if="{{agent}}" class="bubble-meta">
+      <text class="meta-tag">{{agent}}</text>
+    </view>
+  </view>
+</view>

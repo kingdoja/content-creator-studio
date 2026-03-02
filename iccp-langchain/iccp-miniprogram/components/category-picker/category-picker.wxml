@@ -1,0 +1,13 @@
+<view class="picker-grid">
+  <view
+    wx:for="{{categories}}"
+    wx:key="id"
+    class="picker-item {{selected === item.id ? 'active' : ''}}"
+    style="--cat-color: {{item.color}}"
+    bindtap="onSelect"
+    data-id="{{item.id}}"
+  >
+    <text class="picker-icon">{{item.icon}}</text>
+    <text class="picker-name">{{item.name}}</text>
+  </view>
+</view>

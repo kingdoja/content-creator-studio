@@ -1,0 +1,78 @@
+.loading-hint {
+  text-align: center;
+  padding: 120rpx 0;
+  color: #9ca3af;
+  font-size: 28rpx;
+}
+
+.detail-header {
+  margin-bottom: 20rpx;
+}
+
+.detail-topic {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1f2937;
+  display: block;
+  margin-bottom: 20rpx;
+  line-height: 1.4;
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-wrap: wrap;
+  margin-bottom: 16rpx;
+}
+
+.detail-agent {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.detail-time {
+  font-size: 22rpx;
+  color: #9ca3af;
+}
+
+.detail-tools {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+
+.tools-label {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.tool-tag {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.detail-body {
+  min-height: 300rpx;
+}
+
+.detail-content {
+  font-size: 28rpx;
+  line-height: 1.9;
+  color: #374151;
+  white-space: pre-wrap;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 12rpx;
+  padding-bottom: 60rpx;
+}
+
+.detail-actions .btn-primary,
+.detail-actions .btn-outline {
+  flex: 1;
+  height: 84rpx;
+}

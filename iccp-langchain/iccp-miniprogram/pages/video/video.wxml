@@ -1,0 +1,97 @@
+<view class="container">
+  <!-- 结果展示 -->
+  <view wx:if="{{showResult}}" class="result-section">
+    <view wx:if="{{errorMsg}}" class="card error-card">
+      <text class="error-icon">⚠️</text>
+      <text class="error-text">{{errorMsg}}</text>
+      <button class="btn-primary" style="margin-top: 32rpx;" bindtap="handleReset">返回重试</button>
+    </view>
+
+    <view wx:elif="{{result}}" class="card">
+      <view class="flex-between" style="margin-bottom: 20rpx;">
+        <text class="card-title">视频生成完成</text>
+        <view class="result-meta">
+          <text class="tag">{{result.provider}}</text>
+          <text wx:if="{{result.model}}" class="tag" style="margin-left: 8rpx;">{{result.model}}</text>
+        </view>
+      </view>
+
+      <!-- 视频播放 -->
+      <view wx:if="{{result.videoUrl}}" class="video-wrapper">
+        <video
+          src="{{result.videoUrl}}"
+          class="video-player"
+          controls="{{true}}"
+          autoplay="{{false}}"
+          show-fullscreen-btn="{{true}}"
+          object-fit="contain"
+        />
+      </view>
+      <view wx:else class="no-video-tip">
+        <text class="tip-text">视频链接暂不可用，请稍后在历史记录中查看</text>
+      </view>
+
+      <!-- 剧情文本 -->
+      <view wx:if="{{result.storyline}}" class="storyline-section">
+        <text class="storyline-label">剧情文案</text>
+        <view class="storyline-content">
+          <text selectable="true">{{result.storyline}}</text>
+        </view>
+      </view>
+
+      <view class="result-actions">
+        <button class="btn-outline" bindtap="handleReset">重新生成</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 表单 -->
+  <view wx:else>
+    <view class="section-title">视频描述</view>
+    <view class="card">
+      <textarea
+        class="input-area"
+        value="{{inputText}}"
+        bindinput="onInputText"
+        placeholder="输入标题或段落，AI 将润色剧情并生成视频"
+        maxlength="1500"
+        auto-height
+      />
+    </view>
+
+    <view class="options-row">
+      <view class="option-item">
+        <text class="option-label">剧情类型</text>
+        <picker bindchange="onGenreChange" range="{{genreLabels}}" value="{{genreIndex}}">
+          <view class="option-picker">{{genreLabels[genreIndex]}} ▾</view>
+        </picker>
+      </view>
+      <view class="option-item">
+        <text class="option-label">情绪基调</text>
+        <picker bindchange="onMoodChange" range="{{moodLabels}}" value="{{moodIndex}}">
+          <view class="option-picker">{{moodLabels[moodIndex]}} ▾</view>
+        </picker>
+      </view>
+    </view>
+
+    <button class="btn-primary generate-btn" bindtap="handleGenerate" disabled="{{loading || !canGenerate}}">
+      生成视频
+    </button>
+  </view>
+
+  <!-- 进度遮罩 -->
+  <view wx:if="{{loading}}" class="overlay">
+    <view class="overlay-card">
+      <view class="spinner">
+        <view class="dot dot1"></view>
+        <view class="dot dot2"></view>
+        <view class="dot dot3"></view>
+      </view>
+      <text class="overlay-text">{{statusText || '处理中...'}}</text>
+      <view wx:if="{{polling}}" class="progress-bar-wrap">
+        <view class="progress-bar" style="width: {{progress}}%"></view>
+      </view>
+      <text class="overlay-sub">视频生成通常需要 1-3 分钟</text>
+    </view>
+  </view>
+</view>

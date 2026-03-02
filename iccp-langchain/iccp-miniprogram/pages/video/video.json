@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "AI 视频生成",
+  "usingComponents": {
+    "loading-overlay": "/components/loading-overlay/loading-overlay"
+  }
+}

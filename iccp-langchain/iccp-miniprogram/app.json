@@ -1,0 +1,54 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/chat/chat",
+    "pages/writing/writing",
+    "pages/profile/profile",
+    "pages/history/history",
+    "pages/detail/detail",
+    "pages/cover/cover",
+    "pages/video/video"
+  ],
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#6366f1",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tab-home.png",
+        "selectedIconPath": "static/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/chat/chat",
+        "text": "对话",
+        "iconPath": "static/tab-chat.png",
+        "selectedIconPath": "static/tab-chat-active.png"
+      },
+      {
+        "pagePath": "pages/writing/writing",
+        "text": "创作",
+        "iconPath": "static/tab-write.png",
+        "selectedIconPath": "static/tab-write-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "static/tab-user.png",
+        "selectedIconPath": "static/tab-user-active.png"
+      }
+    ]
+  },
+  "window": {
+    "navigationBarBackgroundColor": "#6366f1",
+    "navigationBarTitleText": "ICCP智能创作",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f5f5",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

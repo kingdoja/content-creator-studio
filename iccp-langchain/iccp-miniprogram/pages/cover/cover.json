@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "封面图生成",
+  "usingComponents": {
+    "loading-overlay": "/components/loading-overlay/loading-overlay"
+  }
+}

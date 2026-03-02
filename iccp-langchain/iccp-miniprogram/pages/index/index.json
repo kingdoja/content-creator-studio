@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "ICCP智能创作",
+  "usingComponents": {
+    "category-picker": "/components/category-picker/category-picker"
+  }
+}
