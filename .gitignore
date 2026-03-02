@@ -67,3 +67,6 @@ Thumbs.db
 # ========== 其他 ==========
 *.local
 .cache/
+
+# WeChat mini-program private config (contains real appid/local prefs)
+**/project.private.config.json
