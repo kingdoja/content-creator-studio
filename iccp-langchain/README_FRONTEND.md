@@ -67,6 +67,38 @@ docker stop iccp-frontend 2>/dev/null || true
 docker rm iccp-frontend-dev iccp-frontend 2>/dev/null || true
 ```
 
+#### 5. Docker Compose 一键启动前后端（前后端分离）
+
+在 `iccp-langchain` 目录执行：
+
+```bash
+cd iccp-langchain
+
+# 可选：指定打包到前端里的后端地址（浏览器实际访问地址）
+# 不设置时默认 http://localhost:8000
+export FRONTEND_API_BASE_URL=http://localhost:8000
+
+docker compose up -d --build
+docker compose ps
+```
+
+访问地址：
+- 前端：http://localhost:3000
+- 后端：http://localhost:8000
+
+常用命令：
+
+```bash
+# 查看日志
+docker compose logs -f
+
+# 停止并删除容器（保留 Redis 数据卷）
+docker compose down
+
+# 停止并删除容器 + Redis 数据卷
+docker compose down -v
+```
+
 ### 方式2：静态HTML（简单）
 
 ```bash

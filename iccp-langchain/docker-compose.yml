@@ -6,12 +6,14 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: iccp-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - .env
-    volumes:
-      - ./:/app
+    environment:
+      # 容器内访问 Redis 需使用服务名，避免 localhost 指向容器自身
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       - redis
 
@@ -19,7 +21,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # 注意：这里是打包进前端代码里的浏览器访问地址，不是容器内服务名
+        VITE_API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://localhost:8000}
     container_name: iccp-frontend
+    restart: unless-stopped
     ports:
       - "3000:80"
     depends_on:
@@ -28,6 +34,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: iccp-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
