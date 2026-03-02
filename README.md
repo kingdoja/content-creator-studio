@@ -1,117 +1,309 @@
-# 一人公司 × Vibe Coding 入门指南
+<p align="center">
+  <h1 align="center">Content Creator Studio</h1>
+  <p align="center">
+    <strong>Multi-Agent AI Content Creation Platform powered by LangGraph</strong>
+  </p>
+  <p align="center">
+    <a href="#quick-start">Quick Start</a> &bull;
+    <a href="#features">Features</a> &bull;
+    <a href="#architecture">Architecture</a> &bull;
+    <a href="#api-reference">API</a> &bull;
+    <a href="#deployment">Deploy</a>
+  </p>
+</p>
 
-> 用「氛围编程」从 0 到 1 做可盈利的独立产品
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/LangGraph-0.2-purple?logo=langchain&logoColor=white" alt="LangGraph" />
+  <img src="https://img.shields.io/badge/LangChain-0.3-green?logo=langchain&logoColor=white" alt="LangChain" />
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License" />
+</p>
 
----
-
-## 一、从哪里入手
-
-### 1. 先定方向，再选技术
-
-| 步骤 | 建议 |
-|------|------|
-| **选赛道** | 选你**真懂、真用、真痛**的领域（写作/翻译/效率/小工具/出海 SaaS 等） |
-| **验证想法** | 用 Notion/飞书/AI 对话先写清楚：谁用、解决什么问题、愿意付多少钱 |
-| **MVP 范围** | 只做 1 个核心流程，能跑通「注册 → 用一次 → 愿意付费」即可 |
-
-### 2. 推荐技术栈（适合 Vibe Coding + 一人公司）
-
-- **前端 + 后端**：Next.js（全栈，和 AI 配合友好）
-- **UI**：Shadcn/ui（组件现成，好改）
-- **数据库 + 鉴权**：Supabase（免费额度够用，登录/表结构简单）
-- **部署**：Vercel（和 Next 无缝）
-- **域名 + CDN**：Cloudflare
-
-这样你只需「描述需求」，AI 就能在统一技术栈里生成可运行代码，减少上下文混乱。
-
-### 3. 工具组合
-
-- **写代码 / 改代码**：Cursor（你已经在用）+ Claude Code
-- **产品设计 / 文案 / 方案**：Claude、Gemini 等（想清楚再让 Cursor 实现）
-- **画原型 / 流程图**：先文字描述，再让 AI 生成页面结构
+<p align="center">
+  <strong>English</strong> | <a href="./README.zh-CN.md">中文</a>
+</p>
 
 ---
 
-## 二、具体可以做什么（产品方向举例）
+An intelligent content creation platform that orchestrates **5 specialized AI agents** through a LangGraph state machine — each agent handles different content tasks with automatic routing, quality gating, long-term memory, and RAG-powered knowledge retrieval.
 
-### 高可行性、适合 Vibe Coding 的方向
+Built for solo creators and small teams who want to produce high-quality, fact-checked content across multiple domains without prompt engineering headaches.
 
-1. **AI 小工具 / 工作台**
-   - 例：错别字检查、润色、翻译、标题生成、配图（类似 Text-Well）
-   - 特点：逻辑清晰、接口明确、易拆成小功能迭代
+## Why This Project?
 
-2. **垂直场景的 SaaS**
-   - 例：某个行业的表单/审批/报表、预约/排班、简单 CRM
-   - 特点：先做「一个行业 + 一个核心流程」，再扩展
+| Problem | Solution |
+|---------|----------|
+| Generic LLM outputs lack domain depth | **7 domain-specific prompt templates** (Finance, AI, Tech, Lifestyle, Books, Investment, Growth) |
+| Single-agent can't handle diverse tasks | **5 specialized agents** auto-routed by task analysis |
+| LLM hallucinations in factual content | **Fact-checking tools** + web search with source citations |
+| No context between sessions | **Long-term memory system** — episodic, semantic & procedural |
+| Hard to maintain quality at scale | **Quality gate** with automatic reflection & refinement loop |
 
-3. **Chrome 插件 / 小插件**
-   - 例：网页摘要、高亮翻译、一键保存到 Notion
-   - 特点：体量小、易上线、适合验证「有人愿意用」
+## Features
 
-4. **落地页 + 邮件收集 / 付费**
-   - 例：一个清晰的 landing page + Stripe/支付宝 + 简单后台
-   - 特点：先验证「有人愿意留邮箱/付费」再做大
+### Multi-Agent Orchestration
 
-5. **内容/运营工具**
-   - 例：选题库、标题 A/B、社媒文案批量生成
-   - 特点：和你自己的内容/运营流程结合，容易做出差异化
+Five purpose-built agents, automatically selected based on your task:
+
+| Agent | Best For | How It Works |
+|-------|----------|--------------|
+| **ReAct** | Real-time data, fact-heavy content | Tool-calling loop (search, fact-check) |
+| **Reflection** | Deep, polished articles | Generate → critique → refine cycle |
+| **Plan-and-Solve** | Long-form, complex topics | Plan steps → execute each → synthesize |
+| **RAG** | Knowledge-base powered content | Retrieve relevant docs → augmented generation |
+| **Simple** | Quick Q&A, casual chat | Direct LLM response, low latency |
+
+### Intelligent Routing
+
+```
+User Input → Task Analysis → Agent Selection → Execution → Quality Gate → Output
+                                                              ↓ (fail)
+                                                        Reflection Refine
+```
+
+The router analyzes complexity, domain, and real-time needs to pick the optimal agent — and remembers your preferences over time.
+
+### Long-Term Memory
+
+- **Episodic memory** — remembers past interactions and content
+- **Semantic memory** — stores knowledge and facts
+- **Procedural memory** — learns your style preferences
+- **Memory linking** — connects related memories for richer context
+- **Cross-module sharing** — chat, content, video, and knowledge all share the same memory layer
+
+### Content Pipeline
+
+- **7 domain categories** with specialized prompts and tone
+- **Streaming generation** via SSE for real-time feedback
+- **Multi-agent comparison** — run the same task through different agents and compare
+- **Content evaluation & scoring** — automated quality assessment
+- **Cover image generation** — AI-generated article covers
+- **Story-to-video** — script polishing + text-to-video generation
+
+### Tool System
+
+- **Web Search** — Tavily + DuckDuckGo fallback with time-aware queries
+- **Fact Checking** — cross-reference claims against search results
+- **MCP Bridge** — plug in external MCP-compatible tools dynamically
+- **Tool Registry** — unified interface, agents don't care about implementation details
+
+### Knowledge Base (RAG)
+
+- Upload documents → auto-chunking → embedding → vector retrieval
+- Supports **in-memory** or **Milvus** vector backends
+- Optional time-decay weighting for freshness-sensitive domains
+- Knowledge entries are also saved as semantic memories for cross-module recall
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        LangGraph State Machine                   │
+│                                                                  │
+│  START → memory_load → route ──┬── react_agent ──┐               │
+│                                ├── reflection    ├→ quality_gate │
+│                                ├── plan_solve    │    │    │     │
+│                                ├── rag_agent     │   pass  fail  │
+│                                └── simple        ┘    │    │     │
+│                                                  finalize  │     │
+│                                                    │  reflection  │
+│                                                    │  _refine     │
+│                                                memory_save → END │
+└──────────────────────────────────────────────────────────────────┘
+         │                    │                    │
+    ┌────┴────┐        ┌─────┴─────┐        ┌────┴────┐
+    │ Tools   │        │  Memory   │        │   RAG   │
+    │ Search  │        │ Episodic  │        │ Vector  │
+    │ Fact    │        │ Semantic  │        │ Store   │
+    │ Check   │        │ Procedural│        │ Milvus  │
+    │ MCP     │        │ Prefs     │        │         │
+    └─────────┘        └───────────┘        └─────────┘
+```
+
+### Project Structure
+
+```
+iccp-langchain/
+├── app/
+│   ├── main.py                # FastAPI entry point
+│   ├── config.py              # Centralized configuration
+│   ├── agents/                # LangGraph agents & orchestration
+│   │   ├── graph.py           # State machine definition
+│   │   ├── routing.py         # Intelligent agent routing
+│   │   ├── react_agent.py     # ReAct tool-calling agent
+│   │   ├── reflection_agent.py
+│   │   ├── plan_solve_agent.py
+│   │   └── simple_agent.py
+│   ├── prompting/             # Domain-specific prompt optimizer
+│   ├── memory/                # Long-term memory system
+│   ├── rag/                   # Knowledge base & retrieval
+│   ├── tools/                 # Tool registry & implementations
+│   ├── services/              # Business logic layer
+│   ├── api/v1/                # REST API routes
+│   └── auth/                  # JWT + WeChat mini-program auth
+├── frontend/                  # React 18 + Vite + TailwindCSS
+├── iccp-miniprogram/          # WeChat Mini Program client
+├── tests/                     # Pytest test suite
+├── docker-compose.yml         # One-command deployment
+└── requirements.txt           # Python dependencies
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- An OpenAI API key (GPT-4 recommended)
+- Redis (optional, for caching)
+
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/kingdoja/content-creator-studio.git
+cd content-creator-studio/iccp-langchain
+
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+pip install -r requirements.txt
+```
+
+### 2. Configure Environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your keys:
+
+```env
+OPENAI_API_KEY=sk-your-key-here
+OPENAI_MODEL=gpt-4
+
+# Optional
+TAVILY_API_KEY=tvly-your-key      # Web search
+REDIS_URL=redis://localhost:6379   # Caching
+RAG_VECTOR_BACKEND=memory         # or "milvus"
+```
+
+### 3. Run
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+The API is now live at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
+
+### Docker (Recommended)
+
+```bash
+cd iccp-langchain
+docker compose up -d
+```
+
+This starts the backend (`:8000`), frontend (`:3000`), and Redis.
+
+## API Reference
+
+### Content Creation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/content/create` | Create content with auto agent routing |
+| `POST` | `/api/v1/content/create/stream` | Streaming content generation (SSE) |
+| `GET`  | `/api/v1/content/categories` | List available content categories |
+| `POST` | `/api/v1/content/suggest-agent` | Get agent recommendation for a task |
+| `POST` | `/api/v1/content/compare` | Compare outputs from multiple agents |
+| `POST` | `/api/v1/content/evaluate` | Score and evaluate content quality |
+| `POST` | `/api/v1/content/refine` | Refine/polish existing content |
+| `POST` | `/api/v1/content/generate-cover` | Generate article cover image |
+| `POST` | `/api/v1/content/generate-story-video` | Story script → video generation |
+
+### Chat
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/chat/sessions` | Create a new chat session |
+| `POST` | `/api/v1/chat/sessions/{id}/message` | Send message |
+| `POST` | `/api/v1/chat/sessions/{id}/message/stream` | Streaming chat (SSE) |
+
+### Memory & Knowledge
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET`  | `/api/v1/memory/recall` | Recall relevant memories |
+| `GET`  | `/api/v1/memory/entries` | List memory entries |
+| `PUT`  | `/api/v1/memory/preferences` | Update user preferences |
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Orchestration** | LangGraph 0.2, LangChain 0.3 |
+| **LLM** | OpenAI GPT-4 (configurable) |
+| **Backend** | FastAPI, Uvicorn, Pydantic v2 |
+| **Database** | SQLAlchemy 2.0, SQLite / PostgreSQL |
+| **Vector Store** | In-memory / Milvus |
+| **Cache** | Redis 7 |
+| **Search** | Tavily, DuckDuckGo |
+| **Frontend** | React 18, Vite 5, TailwindCSS |
+| **Mini Program** | WeChat WXML/WXSS |
+| **Deployment** | Docker Compose |
+| **Monitoring** | Prometheus, LangSmith (optional) |
+
+## Deployment
+
+### Docker Compose (Production)
+
+```bash
+docker compose up -d --build
+```
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Backend | 8000 | FastAPI + Uvicorn |
+| Frontend | 3000 | React SPA via Nginx |
+| Redis | 6379 | Cache & session store |
+
+### WeChat Mini Program
+
+The `iccp-miniprogram/` directory contains a WeChat Mini Program client that connects to the same backend API. See [`iccp-miniprogram/README.md`](iccp-langchain/iccp-miniprogram/README.md) for setup instructions.
+
+## Configuration
+
+Key environment variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes | OpenAI API key |
+| `OPENAI_MODEL` | No | Model name (default: `gpt-4`) |
+| `TAVILY_API_KEY` | No | Tavily search API key |
+| `REDIS_URL` | No | Redis connection URL |
+| `RAG_VECTOR_BACKEND` | No | `memory` (default) or `milvus` |
+| `MCP_ENABLED` | No | Enable MCP tool bridge |
+| `WX_APPID` | No | WeChat Mini Program App ID |
+| `LANGCHAIN_TRACING_V2` | No | Enable LangSmith tracing |
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 三、建议与避坑（结合真实案例）
-
-### 1. 先建「规约」再写代码
-
-- 在项目里维护一个 **`ARCHITECTURE.md`**（或 `docs/产品与架构.md`）：
-  - 产品在做什么、核心用户是谁
-  - 主要页面/模块列表
-  - 关键数据流（例如：用户 → 额度 → 调用 AI API）
-- 每次让 AI 实现新功能时都说：「请先看 ARCHITECTURE.md，再按这个架构实现。」
-- 避免：没有单一信息源，AI 被过期文档带偏。
-
-### 2. 控制「AI 味」界面
-
-- 少说「好看一点」「精致一点」，多说具体指令，例如：
-  - 「圆角改小」「去掉渐变，改成纯色」「布局紧凑一点」「不要 emoji」
-- 有参考时：直接贴参考链接或截图，让 AI 对齐风格。
-
-### 3. 防止代码变成一坨
-
-- 每做完几个功能就让 AI：「检查是否有单文件过大、重复逻辑，按单一职责拆文件。」
-- 提前说好约定：例如「一个组件不超过 300 行」「类型定义放在 `types/`」。
-- 需要时再上状态管理（如 Jotai），避免一开始就过度设计。
-
-### 4. 上下文别拖太长
-
-- 新任务或发现 AI 开始「乱答」时，**新开对话**，必要时在首条消息里贴：
-  - 当前要做的功能
-  - 相关文件路径或关键代码片段
-- 长对话里：关键需求容易「丢在中间」，新对话更稳。
-
-### 5. 定期清理过期文档
-
-- AI 生成的说明文档若过时（例如改过计费逻辑），**立刻删或更新**。
-- 避免项目里同时存在「按字符计费」和「按 Token 计费」两份矛盾文档，导致 AI 改错代码。
-
-### 6. 描述 Bug 要具体
-
-- 给 AI：**现象 + 预期 + 相关代码/报错/截图**。
-- 例：「点击提交后应该跳转到 /result，但目前一直转圈，控制台有 500 错误，请求是 POST /api/submit。」
-
----
-
-## 四、本仓库可以怎么用
-
-- **`/docs`**：放产品说明、架构说明、迭代记录（给 AI 和你自己看）。
-- **`/ideas`**：放想法列表、竞品简单分析、定价思路（不写代码，先想清楚）。
-- **项目代码**：建议单独建一个目录（如 `app-text-well-style` 或按产品名），用 Next.js + Supabase + Shadcn 起手。
-
-下一步可以从这里选一条做：
-
-1. 在 `docs/` 里写一份「我的产品一句话 + 核心流程」；
-2. 在 `ideas/` 里列 3 个你想做的产品方向，并标出「最先做哪一个」；
-3. 用 Cursor 在当前仓库里执行「用 Next.js + Shadcn + Supabase 初始化一个最小可运行项目」。
-
----
-
-*参考：Text-Well 案例（少数派）、一人公司 Vibe Coding 实践、2024–2025 独立开发现状。*
+<p align="center">
+  Built with LangGraph + FastAPI for the solo creator economy.<br/>
+  If this project helps you, consider giving it a star!
+</p>
