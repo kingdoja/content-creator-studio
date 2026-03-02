@@ -33,6 +33,40 @@ npm run dev
 #### 3. 访问
 打开浏览器访问：http://localhost:3000
 
+#### 4. Docker 启动前端（可选）
+
+先按上面步骤启动后端（`http://localhost:8000`），然后在 `iccp-langchain` 目录执行：
+
+**开发模式（热更新）**
+```bash
+cd iccp-langchain
+docker build -t iccp-frontend:dev -f ./frontend/Dockerfile.dev ./frontend
+docker run --rm -it --name iccp-frontend-dev \
+  -p 3000:3000 \
+  -v "$(pwd)/frontend:/app" \
+  -v /app/node_modules \
+  -e VITE_API_BASE_URL=http://host.docker.internal:8000 \
+  iccp-frontend:dev
+# 前端访问 http://localhost:3000
+```
+
+**生产模式（Nginx 托管构建产物）**
+```bash
+cd iccp-langchain
+docker build -t iccp-frontend:prod \
+  --build-arg VITE_API_BASE_URL=https://your-backend-domain.com \
+  ./frontend
+docker run -d --name iccp-frontend -p 3000:80 iccp-frontend:prod
+# 前端访问 http://localhost:3000
+```
+
+**停止容器**
+```bash
+docker stop iccp-frontend-dev 2>/dev/null || true
+docker stop iccp-frontend 2>/dev/null || true
+docker rm iccp-frontend-dev iccp-frontend 2>/dev/null || true
+```
+
 ### 方式2：静态HTML（简单）
 
 ```bash
