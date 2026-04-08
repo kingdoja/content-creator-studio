@@ -70,3 +70,13 @@ Thumbs.db
 
 # WeChat mini-program private config (contains real appid/local prefs)
 **/project.private.config.json
+
+# ========== Local AI tooling / specs ==========
+.claude/
+.kiro/
+.github/skills/
+
+# ========== Generated project artifacts ==========
+iccp-langchain/static/generated-covers/
+iccp-langchain/app/static/generated-covers/
+iccp-langchain/test_results_summary.md

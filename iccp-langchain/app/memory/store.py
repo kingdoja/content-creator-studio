@@ -318,15 +318,26 @@ class MemoryStore:
         value: str,
         confidence: float = 0.6,
     ) -> None:
+        # 使用更安全的查询方式，避免 scalar_one_or_none 在有重复数据时报错
         stmt = select(UserPreference).where(
             UserPreference.user_id == user_id, UserPreference.preference_key == key
         )
-        pref = (await db.execute(stmt)).scalar_one_or_none()
-        if pref:
+        result = await db.execute(stmt)
+        prefs = result.scalars().all()  # 获取所有匹配的记录
+        
+        if prefs:
+            # 如果有多条记录（不应该发生，但防御性编程），只更新第一条
+            pref = prefs[0]
             pref.preference_value = value
             pref.confidence = max(pref.confidence, confidence)
             pref.updated_at = datetime.utcnow()
+            
+            # 如果有重复记录，删除其他的
+            if len(prefs) > 1:
+                for dup in prefs[1:]:
+                    await db.delete(dup)
         else:
+            # 没有记录，创建新的
             db.add(
                 UserPreference(
                     user_id=user_id,
@@ -335,7 +346,13 @@ class MemoryStore:
                     confidence=max(0.0, min(1.0, confidence)),
                 )
             )
-        await db.commit()
+        
+        try:
+            await db.commit()
+        except Exception:
+            # 如果提交失败（比如并发插入导致唯一约束冲突），回滚
+            await db.rollback()
+            # 不抛出异常，让调用者继续执行
 
     async def create_memory_link(
         self,

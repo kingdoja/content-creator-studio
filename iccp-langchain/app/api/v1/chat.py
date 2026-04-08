@@ -11,8 +11,7 @@ from app.auth.dependencies import (
     is_admin_user,
     resolve_scoped_user_id,
 )
-from app.agents.graph import get_content_creation_graph
-from app.agents.router import get_agent_router
+from app.agents import get_content_creation_graph, get_agent_router
 from app.config import settings
 from app.db.session import get_db_session
 from app.memory import get_memory_manager

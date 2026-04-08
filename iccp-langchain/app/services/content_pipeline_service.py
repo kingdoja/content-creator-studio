@@ -125,6 +125,39 @@ async def prepare_content_generation_context(
 
 
 def build_content_response_dict(final_state: dict[str, Any]) -> dict[str, Any]:
+    """Build a flat response dict from the graph's final state.
+
+    Supports both the new domain-object state (result: ContentResult) and
+    the legacy flat-field state shape (backward compat with tests/old callers).
+    """
+    result = final_state.get("result")
+    if result is not None and hasattr(result, "success"):
+        # New domain-object state
+        analysis = final_state.get("analysis")
+        analysis_dict: dict[str, Any] | None = None
+        if analysis is not None and hasattr(analysis, "task_type"):
+            analysis_dict = {
+                "complexity": analysis.complexity,
+                "task_type": analysis.task_type,
+                "requires_knowledge": analysis.requires_knowledge,
+                "requires_real_time_data": analysis.requires_real_time_data,
+                "requires_reflection": analysis.requires_reflection,
+                "estimated_iterations": analysis.estimated_iterations,
+            }
+        return {
+            "success": result.success,
+            "content": result.content,
+            "agent": result.agent,
+            "tools_used": list(result.tools_used),
+            "iterations": result.iterations,
+            "agent_selected": result.agent,
+            "task_analysis": analysis_dict,
+            "quality_gate_passed": final_state.get("quality_passed"),
+            "quality_gate_reason": None,
+            "execution_trace": final_state.get("execution_trace", []),
+            "error": result.error,
+        }
+    # Legacy flat-field state (tests, old callers)
     return {
         "success": final_state.get("success", False),
         "content": final_state.get("content", ""),

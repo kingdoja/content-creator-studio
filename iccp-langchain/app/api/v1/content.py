@@ -1,9 +1,11 @@
 """
-内容创作 API：唯一执行入口为 LangGraph 编排（route → simple | react | reflection | plan_solve | rag）
+内容创作 API — 端点函数只做请求验证、调用 ContentService、序列化响应。
+业务逻辑全部委托给 ContentService 和 ContentPipelineService。
+视频相关端点已迁移到 app/api/v1/video.py。
+Requirements: 8.1, 8.2
 """
 import asyncio
 import json
-from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -15,7 +17,6 @@ from app.agents import get_content_creation_graph, get_agent_router
 from app.auth.dependencies import get_current_user, get_optional_current_user, resolve_scoped_user_id
 from app.categories.loader import prompt_loader
 from app.categories.config import CATEGORIES
-from app.config import settings
 from app.db.session import get_db_session
 from app.evaluation import score_content
 from app.llm.client import LLMClient
@@ -36,17 +37,20 @@ from app.services.content_pipeline_service import (
     validate_category_or_raise,
 )
 from app.services.content_session_service import persist_content_session_messages
-from app.services.video_generator import (
-    create_story_video_task,
-    generate_story_video,
-    query_story_video_task,
-    VideoGenerationError,
-)
+from app.services.content_service import ContentService, CreateContentRequest, RefineContentRequest
+from app.domain.models import ContentTask
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_content_service = ContentService()
+
+
+# ---------------------------------------------------------------------------
+# Request / Response models
+# ---------------------------------------------------------------------------
 
 class ContentRequest(BaseModel):
     """内容创作请求"""
@@ -60,6 +64,7 @@ class ContentRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="绑定会话ID（可选）")
     use_memory: Optional[bool] = Field(False, description="写作模块已停用：该参数保留仅为兼容")
     memory_top_k: Optional[int] = Field(4, ge=1, le=10, description="写作模块已停用：该参数保留仅为兼容")
+
 
 class ContentResponse(BaseModel):
     """内容创作响应"""
@@ -95,61 +100,6 @@ class CoverResponse(BaseModel):
     model: Optional[str] = None
     latency_ms: Optional[int] = None
     error: Optional[str] = None
-
-
-class StoryVideoRequest(BaseModel):
-    """剧情润色 + 文生视频请求"""
-    input_text: str = Field(..., min_length=1, max_length=1500, description="标题或段落输入")
-    genre: Optional[str] = Field("sci-fi", description="剧情类型")
-    mood: Optional[str] = Field("epic", description="情绪基调")
-    duration_seconds: Optional[int] = Field(8, description="时长，单位秒")
-    aspect_ratio: Optional[str] = Field("16:9", description="画面比例")
-    model: Optional[str] = Field(None, description="视频模型")
-    provider: Optional[str] = Field(None, description="视频模型提供商")
-    extra_requirements: Optional[str] = Field(None, description="额外要求")
-    resolution: Optional[str] = Field("720p", description="分辨率: 480p/720p/1080p")
-    watermark: Optional[bool] = Field(False, description="是否加水印")
-    camera_fixed: Optional[bool] = Field(False, description="是否固定机位")
-    seed: Optional[int] = Field(None, description="随机种子")
-    generate_audio: Optional[bool] = Field(None, description="是否生成音频（1.5 pro 支持）")
-    return_last_frame: Optional[bool] = Field(None, description="是否返回尾帧图")
-    execution_expires_after: Optional[int] = Field(None, description="任务超时阈值（秒）")
-    draft: Optional[bool] = Field(None, description="是否开启 draft 模式")
-    callback_url: Optional[str] = Field(None, description="任务状态回调地址")
-    user_id: Optional[str] = Field("anonymous", description="会话用户标识")
-    session_id: Optional[str] = Field(None, description="绑定会话ID（可选）")
-    use_memory: Optional[bool] = Field(False, description="是否启用长期记忆增强")
-    memory_top_k: Optional[int] = Field(4, ge=1, le=10, description="记忆召回条数")
-
-
-class StoryVideoResponse(BaseModel):
-    """剧情润色 + 文生视频响应"""
-    success: bool
-    storyline: str
-    video_prompt: str
-    video_url: Optional[str] = None
-    task_id: Optional[str] = None
-    status: Optional[str] = None
-    provider: Optional[str] = None
-    model: Optional[str] = None
-    latency_ms: Optional[int] = None
-    progress_percent: Optional[int] = None
-    memory_recalled_count: Optional[int] = None
-    memory_recalled: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-
-
-class StoryVideoTaskStatusResponse(BaseModel):
-    """剧情视频任务状态响应"""
-    success: bool
-    task_id: str
-    status: str
-    progress_percent: int
-    video_url: Optional[str] = None
-    last_frame_url: Optional[str] = None
-    error: Optional[str] = None
-    updated_at: Optional[int] = None
-    created_at: Optional[int] = None
 
 
 class CompareRequest(BaseModel):
@@ -208,103 +158,29 @@ class PromptTemplateUpdateRequest(BaseModel):
     content: str = Field(..., min_length=1, description="新的板块 prompt 内容")
 
 
-async def _build_video_memory_context(
-    db: AsyncSession,
-    *,
-    input_text: str,
-    user_id: str,
-    use_memory: bool,
-    memory_top_k: int,
-) -> tuple[str, list[dict[str, Any]]]:
-    if not use_memory:
-        return "", []
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-    manager = get_memory_manager()
-    try:
-        recalled = await asyncio.wait_for(
-            manager.recall(
-                db,
-                query=input_text,
-                user_id=user_id or "anonymous",
-                memory_types=["episodic", "semantic", "procedural"],
-                top_k=max(1, min(memory_top_k, 10)),
-            ),
-            timeout=max(1, settings.MEMORY_RECALL_TIMEOUT_SECONDS),
-        )
-    except asyncio.TimeoutError:
-        recalled = []
-    if not recalled:
-        return "", []
-
-    lines = []
-    for idx, item in enumerate(recalled):
-        lines.append(
-            f"[{idx + 1}] 来源={item.get('source_module', '')} 类型={item.get('memory_type', '')}\n"
-            f"{item.get('content', '')}"
-        )
-    return "\n\n".join(lines), recalled
+def _sse(event: str, data: Dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-async def _persist_video_generation_memory(
-    db: AsyncSession,
-    *,
-    user_id: str,
-    session_id: Optional[str],
-    input_text: str,
-    genre: str,
-    mood: str,
-    storyline: str,
-    provider: Optional[str],
-    model: Optional[str],
-    task_id: Optional[str],
-    recalled: list[dict[str, Any]],
-) -> None:
-    manager = get_memory_manager()
-    source_id = ((task_id or session_id or str(uuid4())) or str(uuid4()))[:36]
-    summary = (
-        f"视频主题：{input_text}\n"
-        f"类型：{genre}；情绪：{mood}\n"
-        f"剧情摘要：{(storyline or '')[:800]}\n"
-        f"模型：{model or '-'}；提供商：{provider or '-'}"
-    ).strip()
-    saved_entry = await manager.store.create_memory_entry(
-        db,
-        user_id=user_id,
-        memory_type="episodic",
-        source_module="video",
-        source_id=source_id,
-        content=summary,
-        importance=0.68,
-        tags=["video_generation", genre, mood],
+def _request_to_content_task(request: ContentRequest) -> ContentTask:
+    """Convert ContentRequest DTO to ContentTask domain object."""
+    return ContentTask(
+        category=request.category,
+        topic=request.topic,
+        requirements=request.requirements or "",
+        length=request.length or "medium",
+        style=request.style or "professional",
+        force_simple=bool(request.force_simple),
     )
-    await manager.update_preference(
-        db,
-        user_id=user_id,
-        key="preferred_video_genre",
-        value=genre,
-        confidence=0.62,
-    )
-    await manager.update_preference(
-        db,
-        user_id=user_id,
-        key="preferred_video_mood",
-        value=mood,
-        confidence=0.62,
-    )
-    for item in recalled[:8]:
-        source_memory_id = item.get("id")
-        if not source_memory_id:
-            continue
-        await manager.link_memories(
-            db,
-            source_type="memory_entry",
-            source_id=str(source_memory_id),
-            target_type="memory_entry",
-            target_id=saved_entry.id,
-            relation="contextual_support",
-            strength=float(item.get("score") or 0.6),
-        )
 
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
 
 @router.post("/create", response_model=ContentResponse)
 async def create_content(
@@ -315,29 +191,44 @@ async def create_content(
     """创建内容"""
     try:
         validate_category_or_raise(request.category, CATEGORIES)
-        
         user_id = resolve_scoped_user_id(request.user_id, current_user)
         manager = get_memory_manager()
-        task, _ = await prepare_content_generation_context(request=request)
-        
-        # 由 LangGraph 编排：route → react | reflection | plan_solve
-        graph = get_content_creation_graph()
-        final_state = await graph.ainvoke(
-            {
-                "task": task,
-                "user_id": user_id,
-                "session_id": request.session_id,
-            }
+
+        task = _request_to_content_task(request)
+        svc_request = CreateContentRequest(
+            task=task,
+            user_id=user_id,
+            session_id=request.session_id,
+            use_memory=bool(request.use_memory),
+            memory_top_k=request.memory_top_k or 4,
         )
-        
-        response_data = build_content_response_dict(final_state)
-        response = ContentResponse(**response_data)
+        result = await _content_service.create_content(svc_request)
+
+        response = ContentResponse(
+            success=result.success,
+            content=result.content,
+            agent=result.agent,
+            tools_used=list(result.tools_used or []),
+            iterations=result.iterations,
+            execution_trace=(result.metadata or {}).get("execution_trace"),
+            task_analysis=(result.metadata or {}).get("task_analysis"),
+            quality_gate_passed=(result.metadata or {}).get("quality_passed"),
+            error=result.error,
+        )
+
         await persist_content_record(
             db=db,
             user_id=user_id,
             category=request.category,
             topic=request.topic,
-            result=response_data,
+            result={
+                "success": result.success,
+                "content": result.content,
+                "agent": result.agent,
+                "tools_used": list(result.tools_used or []),
+                "iterations": result.iterations,
+                "error": result.error,
+            },
         )
 
         if request.session_id:
@@ -347,23 +238,21 @@ async def create_content(
                 session_id=request.session_id,
                 user_id=user_id,
                 topic=request.topic,
-                content=response.content,
+                content=result.content,
                 module="content",
                 metadata_extra={
-                    "agent": response.agent,
-                    "tools_used": response.tools_used,
+                    "agent": result.agent,
+                    "tools_used": list(result.tools_used or []),
                 },
             )
         return response
-        
+
     except HTTPException:
         raise
     except asyncio.CancelledError:
-        # 常见于服务关闭（Ctrl+C）或客户端断开连接时，中断正在进行的 LLM/工具调用。
-        # 这里尽量把错误语义说清楚，避免前端只看到 500。
         raise HTTPException(status_code=499, detail="请求已取消或服务正在停止")
     except Exception as e:
-        logger.error(f"内容创建失败: {e}")
+        logger.error("内容创建失败: %s", e)
         raise HTTPException(status_code=500, detail=f"内容创建失败: {str(e)}")
 
 
@@ -434,7 +323,6 @@ async def create_content_stream(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     validate_category_or_raise(request.category, CATEGORIES)
-
     user_id = resolve_scoped_user_id(request.user_id, current_user)
     manager = get_memory_manager()
     task, _ = await prepare_content_generation_context(request=request)
@@ -455,56 +343,58 @@ async def create_content_stream(
                 for node_name, payload in update.items():
                     if isinstance(payload, dict):
                         latest_state.update(payload)
-                        if payload.get("content"):
-                            yield _sse("content_chunk", {"content": payload.get("content", ""), "node": node_name})
+                        result_obj = payload.get("result")
+                        chunk_content = (
+                            result_obj.content
+                            if (result_obj and hasattr(result_obj, "content"))
+                            else payload.get("content")
+                        )
+                        if chunk_content:
+                            yield _sse("content_chunk", {"content": chunk_content, "node": node_name})
                         yield _sse("node_update", {"node": node_name, "keys": list(payload.keys())})
-            yield _sse(
-                "complete",
-                {
-                    "success": latest_state.get("success", False),
-                    "content": latest_state.get("content", ""),
-                    "agent": latest_state.get("agent", ""),
-                    "tools_used": latest_state.get("tools_used", []),
-                    "iterations": latest_state.get("iterations", 0),
-                    "execution_trace": latest_state.get("execution_trace", []),
-                    "error": latest_state.get("error"),
-                },
-            )
+
+            final = build_content_response_dict(latest_state)
+            yield _sse("complete", {
+                "success": final["success"],
+                "content": final["content"],
+                "agent": final["agent"],
+                "tools_used": final["tools_used"],
+                "iterations": final["iterations"],
+                "execution_trace": final["execution_trace"],
+                "error": final["error"],
+            })
             await persist_content_record(
                 db=db,
                 user_id=user_id,
                 category=request.category,
                 topic=request.topic,
-                result=latest_state,
+                result=final,
             )
-            if request.session_id and latest_state.get("content"):
+            if request.session_id and final.get("content"):
                 await persist_content_session_messages(
                     db=db,
                     manager=manager,
                     session_id=request.session_id,
                     user_id=user_id,
                     topic=request.topic,
-                    content=latest_state.get("content", ""),
+                    content=final.get("content", ""),
                     module="content_stream",
                     metadata_extra={
-                        "agent": latest_state.get("agent", ""),
-                        "tools_used": latest_state.get("tools_used", []),
+                        "agent": final.get("agent", ""),
+                        "tools_used": final.get("tools_used", []),
                     },
                 )
         except Exception as e:
-            logger.error(f"流式内容创建失败: {e}")
+            logger.error("流式内容创建失败: %s", e)
             yield _sse("error", {"error": str(e)})
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+
 @router.get("/categories")
 async def get_categories():
     """获取所有板块"""
-    return {
-        "categories": [
-            {"id": k, **v} for k, v in CATEGORIES.items()
-        ]
-    }
+    return {"categories": [{"id": k, **v} for k, v in CATEGORIES.items()]}
 
 
 @router.get("/categories/{category_id}/prompt")
@@ -527,6 +417,7 @@ async def update_category_prompt(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @router.post("/suggest-agent")
 async def suggest_agent(request: ContentRequest, current_user: User = Depends(get_current_user)):
     """获取 Agent 选择建议（与 LangGraph 路由逻辑一致）"""
@@ -539,14 +430,11 @@ async def suggest_agent(request: ContentRequest, current_user: User = Depends(ge
             "style": request.style,
             "force_simple": request.force_simple,
         }
-        
         agent_router = get_agent_router()
         suggestion = agent_router.get_suggestion(task)
-        
         return suggestion
-        
     except Exception as e:
-        logger.error(f"获取Agent建议失败: {e}")
+        logger.error("获取Agent建议失败: %s", e)
         raise HTTPException(status_code=500, detail=f"获取建议失败: {str(e)}")
 
 
@@ -559,137 +447,8 @@ async def generate_cover(request: CoverRequest):
     except CoverGenerationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"封面图生成失败: {e}")
+        logger.error("封面图生成失败: %s", e)
         raise HTTPException(status_code=500, detail=f"封面图生成失败: {str(e)}")
-
-
-@router.post("/generate-story-video", response_model=StoryVideoResponse)
-async def create_story_video(
-    request: StoryVideoRequest,
-    db: AsyncSession = Depends(get_db_session),
-    current_user: User | None = Depends(get_optional_current_user),
-):
-    """根据输入文本先润色剧情，再调用文生视频模型生成视频"""
-    try:
-        user_id = resolve_scoped_user_id(request.user_id, current_user)
-        memory_context_text, recalled = await _build_video_memory_context(
-            db,
-            input_text=request.input_text,
-            user_id=user_id,
-            use_memory=bool(request.use_memory),
-            memory_top_k=request.memory_top_k or 4,
-        )
-        payload = request.model_dump()
-        payload["memory_context_text"] = memory_context_text
-        result = await generate_story_video(payload)
-        result["memory_recalled_count"] = len(recalled)
-        result["memory_recalled"] = recalled
-        if result.get("success") and result.get("storyline"):
-            await _persist_video_generation_memory(
-                db,
-                user_id=user_id,
-                session_id=request.session_id,
-                input_text=request.input_text,
-                genre=request.genre or "sci-fi",
-                mood=request.mood or "epic",
-                storyline=result.get("storyline", ""),
-                provider=result.get("provider"),
-                model=result.get("model"),
-                task_id=result.get("task_id"),
-                recalled=recalled,
-            )
-        return StoryVideoResponse(**result)
-    except VideoGenerationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"剧情视频生成失败: {e}")
-        raise HTTPException(status_code=500, detail=f"剧情视频生成失败: {str(e)}")
-
-
-@router.post("/generate-story-video/start", response_model=StoryVideoResponse)
-async def start_story_video_task(
-    request: StoryVideoRequest,
-    db: AsyncSession = Depends(get_db_session),
-    current_user: User | None = Depends(get_optional_current_user),
-):
-    """创建剧情视频任务（先润色剧情，再提交 Seedance 任务）"""
-    try:
-        user_id = resolve_scoped_user_id(request.user_id, current_user)
-        memory_context_text, recalled = await _build_video_memory_context(
-            db,
-            input_text=request.input_text,
-            user_id=user_id,
-            use_memory=bool(request.use_memory),
-            memory_top_k=request.memory_top_k or 4,
-        )
-        payload = request.model_dump()
-        payload["memory_context_text"] = memory_context_text
-        result = await create_story_video_task(payload)
-        result["memory_recalled_count"] = len(recalled)
-        result["memory_recalled"] = recalled
-
-        if request.session_id and result.get("storyline"):
-            manager = get_memory_manager()
-            session = await manager.get_session(db, session_id=request.session_id)
-            if session and session.get("user_id") == user_id:
-                await manager.add_message(
-                    db,
-                    session_id=request.session_id,
-                    role="user",
-                    content=request.input_text,
-                    message_type="task",
-                    metadata={"module": "video"},
-                )
-                await manager.add_message(
-                    db,
-                    session_id=request.session_id,
-                    role="assistant",
-                    content=result.get("storyline", ""),
-                    message_type="result",
-                    metadata={
-                        "module": "video",
-                        "provider": result.get("provider"),
-                        "model": result.get("model"),
-                        "memory_recalled_count": len(recalled),
-                    },
-                )
-        if result.get("success") and result.get("storyline"):
-            await _persist_video_generation_memory(
-                db,
-                user_id=user_id,
-                session_id=request.session_id,
-                input_text=request.input_text,
-                genre=request.genre or "sci-fi",
-                mood=request.mood or "epic",
-                storyline=result.get("storyline", ""),
-                provider=result.get("provider"),
-                model=result.get("model"),
-                task_id=result.get("task_id"),
-                recalled=recalled,
-            )
-        return StoryVideoResponse(**result)
-    except VideoGenerationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"创建剧情视频任务失败: {e}")
-        raise HTTPException(status_code=500, detail=f"创建剧情视频任务失败: {str(e)}")
-
-
-@router.get("/generate-story-video/tasks/{task_id}", response_model=StoryVideoTaskStatusResponse)
-async def get_story_video_task_status(task_id: str, provider: Optional[str] = "seedance"):
-    """查询剧情视频任务状态（用于前端轮询进度）"""
-    try:
-        result = await query_story_video_task(task_id=task_id, provider=provider or "seedance")
-        return StoryVideoTaskStatusResponse(**result)
-    except VideoGenerationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"查询剧情视频任务失败: {e}")
-        raise HTTPException(status_code=500, detail=f"查询剧情视频任务失败: {str(e)}")
-
-
-def _sse(event: str, data: Dict[str, Any]) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
 @router.post("/evaluate")
@@ -715,22 +474,48 @@ async def refine_content(
     current_user: User = Depends(get_current_user),
 ):
     validate_category_or_raise(request.category, CATEGORIES)
-    task = build_refine_task_payload(request)
-    router = get_agent_router()
-    result = await router.reflection_agent.execute(
-        task,
-        context={"draft_content": request.draft_content, "max_reflections": 2},
-    )
     scoped_user_id = resolve_scoped_user_id(request.user_id, current_user)
+
+    task = ContentTask(
+        category=request.category,
+        topic=request.topic,
+        requirements=request.requirements or "",
+        length=request.length or "medium",
+        style=request.style or "professional",
+    )
+    svc_request = RefineContentRequest(
+        task=task,
+        draft_content=request.draft_content,
+        user_id=scoped_user_id,
+        max_reflections=2,
+    )
+    result = await _content_service.refine_content(svc_request)
+
     await persist_refine_record(
         db=db,
         user_id=scoped_user_id,
         request=request,
-        result=result,
+        result={
+            "success": result.success,
+            "content": result.content,
+            "agent": result.agent,
+            "tools_used": list(result.tools_used or []),
+            "iterations": result.iterations,
+            "error": result.error,
+        },
         stream_mode=False,
     )
-    evaluation = score_content(result.get("content", ""), topic=request.topic)
-    return {"success": result.get("success", False), "result": result, "evaluation": evaluation}
+    evaluation = score_content(result.content, topic=request.topic)
+    return {
+        "success": result.success,
+        "result": {
+            "content": result.content,
+            "agent": result.agent,
+            "iterations": result.iterations,
+            "error": result.error,
+        },
+        "evaluation": evaluation,
+    }
 
 
 @router.post("/refine/stream")
@@ -741,13 +526,13 @@ async def refine_content_stream(
 ):
     validate_category_or_raise(request.category, CATEGORIES)
     task = build_refine_task_payload(request)
-    router = get_agent_router()
+    agent_router = get_agent_router()
 
     async def event_generator():
         yield _sse("start", {"message": "refine stream started"})
         yield _sse("node_update", {"node": "reflection_start", "keys": ["task", "draft_content"]})
         try:
-            result = await router.reflection_agent.execute(
+            result = await agent_router.reflection_agent.execute(
                 task,
                 context={"draft_content": request.draft_content, "max_reflections": 2},
             )
@@ -764,7 +549,7 @@ async def refine_content_stream(
             yield _sse("node_update", {"node": "reflection_complete", "keys": list(result.keys())})
             yield _sse("complete", build_refine_stream_complete_payload(result))
         except Exception as e:
-            logger.error(f"流式二次编辑失败: {e}")
+            logger.error("流式二次编辑失败: %s", e)
             yield _sse("error", {"error": str(e)})
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
@@ -798,24 +583,20 @@ async def compare_models(request: CompareModelsRequest, current_user: User = Dep
                 temperature=0.7,
             )
             evaluation = score_content(content, topic=request.topic)
-            results.append(
-                {
-                    "model": model_name,
-                    "success": True,
-                    "content": content,
-                    "evaluation": evaluation,
-                }
-            )
+            results.append({
+                "model": model_name,
+                "success": True,
+                "content": content,
+                "evaluation": evaluation,
+            })
         except Exception as e:
-            results.append(
-                {
-                    "model": model_name,
-                    "success": False,
-                    "content": "",
-                    "error": str(e),
-                    "evaluation": {"total_score": 0, "dimensions": {}, "advice": ["模型调用失败"]},
-                }
-            )
+            results.append({
+                "model": model_name,
+                "success": False,
+                "content": "",
+                "error": str(e),
+                "evaluation": {"total_score": 0, "dimensions": {}, "advice": ["模型调用失败"]},
+            })
 
     winner = None
     successful = [item for item in results if item.get("success")]

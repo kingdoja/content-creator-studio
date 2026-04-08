@@ -1,17 +1,28 @@
 """
 Simple Agent实现
 用于简单问答和日常聊天场景：快速、简洁地给出回答，不走复杂工具链。
-"""
-from typing import Dict, Any
-from datetime import datetime
 
+Refactored to accept domain objects (ContentTask + ExecutionContext).
+Memory recall is no longer performed here; it is handled upstream by ContextBuilder.
+Requirements: 1.3, 3.1
+"""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Dict
+
+from app.domain.interfaces import BaseAgent, ExecutionContext
+from app.domain.models import ContentResult, ContentTask
 from app.llm.client import get_llm_client
 
 
-class SimpleAgent:
+class SimpleAgent(BaseAgent):
     """Simple Agent - 面向简单问答和日常聊天的轻量执行器"""
 
-    CASUAL_INDICATORS = { 
+    name = "simple"
+    description = "Simple Agent：用于简单问答和日常聊天，快速给出简洁准确的回答。"
+
+    CASUAL_INDICATORS = {
         "嗨", "你好", "hi", "hello", "hey", "谢谢", "thanks", "再见", "bye",
         "哈哈", "ok", "好的", "嗯", "对", "是的", "哦", "嘛", "呀",
     }
@@ -21,47 +32,36 @@ class SimpleAgent:
         "what time", "current time", "today date", "today is",
     }
 
-    def __init__(self):
-        self.name = "simple"
-        self.description = "Simple Agent：用于简单问答和日常聊天，快速给出简洁准确的回答。"
+    def __init__(self) -> None:
         self.llm_client = get_llm_client()
 
-    def _is_casual_chat(self, topic: str) -> bool:
-        t = topic.strip().lower()
-        if len(t) <= 15:
-            return True
-        return any(k in t for k in self.CASUAL_INDICATORS)
+    # ------------------------------------------------------------------
+    # BaseAgent interface
+    # ------------------------------------------------------------------
 
-    def _is_time_query(self, topic: str) -> bool:
-        t = topic.strip().lower()
-        return any(k in t for k in self.TIME_QUERY_INDICATORS)
-
-    def _build_time_reply(self) -> str:
-        now = datetime.now()
-        weekday_map = ["一", "二", "三", "四", "五", "六", "日"]
-        weekday = weekday_map[now.weekday()]
-        return (
-            f"现在是{now.year}年{now.month}月{now.day}日，"
-            f"星期{weekday}，{now.strftime('%H:%M')}。"
-        )
-
-    async def execute(self, task: Dict[str, Any], context: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def execute(
+        self,
+        task: ContentTask,
+        context: ExecutionContext,
+    ) -> ContentResult:
+        """Execute using domain objects (new interface)."""
         try:
-            model_override = ((context or {}).get("llm_model_override") or "").strip() or None
-            topic = task.get("topic", "")
-            requirements = task.get("requirements") or ""
-            category = task.get("category", "lifestyle")
-            is_chat = task.get("module") == "chat"
+            model_override = self._resolve_model_override(context)
+            prefs = context.user_context.preferences if context and context.user_context else {}
+            is_chat = bool(prefs.get("_is_chat", False))
+            topic = task.topic
+            requirements = task.requirements or ""
+            category = task.category
 
             if self._is_time_query(topic):
-                return {
-                    "success": True,
-                    "content": self._build_time_reply(),
-                    "agent": self.name,
-                    "tools_used": [],
-                    "iterations": 1,
-                    "metadata": {"mode": "simple_time"},
-                }
+                return ContentResult(
+                    success=True,
+                    content=self._build_time_reply(),
+                    agent=self.name,
+                    tools_used=(),
+                    iterations=1,
+                    metadata={"mode": "simple_time"},
+                )
 
             if self._is_casual_chat(topic):
                 prompt = self._build_chat_prompt(topic, category, requirements, is_chat)
@@ -74,25 +74,111 @@ class SimpleAgent:
                 model=model_override,
             )
 
-            return {
-                "success": True,
-                "content": content,
-                "agent": self.name,
-                "tools_used": [],
-                "iterations": 1,
-                "metadata": {"mode": "simple_chat" if self._is_casual_chat(topic) else "simple_qa"},
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "content": "",
-                "agent": self.name,
-                "tools_used": [],
-                "iterations": 1,
-                "error": str(e),
-            }
+            return ContentResult(
+                success=True,
+                content=content,
+                agent=self.name,
+                tools_used=(),
+                iterations=1,
+                metadata={"mode": "simple_chat" if self._is_casual_chat(topic) else "simple_qa"},
+            )
+        except Exception as exc:
+            return ContentResult(
+                success=False,
+                content="",
+                agent=self.name,
+                tools_used=(),
+                iterations=1,
+                error=str(exc),
+            )
 
-    def _build_chat_prompt(self, topic: str, category: str, requirements: str = "", is_chat: bool = False) -> str:
+    # ------------------------------------------------------------------
+    # Legacy dict-based interface (kept for backward compatibility)
+    # ------------------------------------------------------------------
+
+    async def execute_dict(
+        self,
+        task: Dict[str, Any],
+        context: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Legacy interface that accepts raw dicts. Delegates to execute()."""
+        from app.domain.models import UserContext
+
+        ctx = context or {}
+        is_chat = task.get("module") == "chat"
+        # Carry is_chat flag via preferences so execute() can read it
+        prefs = dict(ctx.get("user_preferences") or {})
+        prefs["_is_chat"] = is_chat
+        if ctx.get("llm_model_override"):
+            prefs["llm_model_override"] = ctx["llm_model_override"]
+
+        content_task = ContentTask(
+            category=task.get("category", "lifestyle"),
+            topic=task.get("topic", ""),
+            requirements=task.get("requirements") or "",
+            length=task.get("length", "medium"),
+            style=task.get("style", "professional"),
+            force_simple=task.get("force_simple", False),
+        )
+        user_ctx = UserContext(
+            user_id=ctx.get("user_id", "anonymous"),
+            session_id=ctx.get("session_id"),
+            recalled_memories=tuple(ctx.get("recalled_memories") or []),
+            preferences=prefs,
+        )
+        exec_ctx = ExecutionContext(
+            user_context=user_ctx,
+            session_id=ctx.get("session_id"),
+        )
+
+        result = await self.execute(content_task, exec_ctx)
+        return {
+            "success": result.success,
+            "content": result.content,
+            "agent": result.agent,
+            "tools_used": list(result.tools_used),
+            "iterations": result.iterations,
+            "error": result.error,
+            "metadata": result.metadata,
+        }
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _resolve_model_override(context: ExecutionContext) -> str | None:
+        """Extract optional LLM model override from execution context."""
+        if context is None:
+            return None
+        # ExecutionContext may carry extra metadata via user_context.preferences
+        prefs = context.user_context.preferences if context.user_context else {}
+        override = (prefs.get("llm_model_override") or "").strip()
+        return override or None
+
+    def _is_casual_chat(self, topic: str) -> bool:
+        t = topic.strip().lower()
+        if len(t) <= 15:
+            return True
+        return any(k in t for k in self.CASUAL_INDICATORS)
+
+    def _is_time_query(self, topic: str) -> bool:
+        t = topic.strip().lower()
+        return any(k in t for k in self.TIME_QUERY_INDICATORS)
+
+    @staticmethod
+    def _build_time_reply() -> str:
+        now = datetime.now()
+        weekday_map = ["一", "二", "三", "四", "五", "六", "日"]
+        weekday = weekday_map[now.weekday()]
+        return (
+            f"现在是{now.year}年{now.month}月{now.day}日，"
+            f"星期{weekday}，{now.strftime('%H:%M')}。"
+        )
+
+    def _build_chat_prompt(
+        self, topic: str, category: str, requirements: str = "", is_chat: bool = False
+    ) -> str:
         ctx = f"\n\n同会话上下文（如有）：\n{requirements}" if requirements.strip() else ""
         if is_chat:
             return (
@@ -114,8 +200,14 @@ class SimpleAgent:
             f"用户说：{topic}{ctx}"
         )
 
-    def _build_qa_prompt(self, topic: str, category: str, requirements: str, is_chat: bool = False) -> str:
-        req_line = f"\n补充信息：{requirements}" if requirements.strip() and requirements.strip() != "无" else ""
+    def _build_qa_prompt(
+        self, topic: str, category: str, requirements: str, is_chat: bool = False
+    ) -> str:
+        req_line = (
+            f"\n补充信息：{requirements}"
+            if requirements.strip() and requirements.strip() != "无"
+            else ""
+        )
         if is_chat:
             return (
                 f"你是一个温和但靠谱的问答助手，用聊天的口吻回答，但内容必须有用。\n\n"

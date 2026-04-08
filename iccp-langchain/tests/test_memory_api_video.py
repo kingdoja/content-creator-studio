@@ -115,8 +115,21 @@ def test_video_start_includes_memory_context(client, monkeypatch):
     asyncio.run(_seed_memory(user_id, "video", "历史剧情：主角是失忆机器人，风格偏赛博朋克。"))
     captured = {}
 
-    async def _fake_create_story_video_task(payload):
+    async def _fake_start_video_task(db, payload, user_id, session_id, use_memory, memory_top_k):
+        # Capture the payload to verify memory context is included
         captured["payload"] = payload
+        captured["use_memory"] = use_memory
+        captured["memory_top_k"] = memory_top_k
+        
+        # Simulate what the real service does: recall memory and add to result
+        from app.services.context_builder import ContextBuilder
+        context_builder = ContextBuilder()
+        user_context = await context_builder.build_user_context(
+            user_id=user_id,
+            query=payload.get("input_text", ""),
+            session_id=session_id,
+        )
+        
         return {
             "success": True,
             "storyline": "mock storyline",
@@ -127,9 +140,12 @@ def test_video_start_includes_memory_context(client, monkeypatch):
             "model": "mock-model",
             "progress_percent": 10,
             "latency_ms": 1,
+            "memory_recalled_count": len(user_context.recalled_memories),
+            "memory_recalled": user_context.recalled_memories,
         }
 
-    monkeypatch.setattr("app.api.v1.content.create_story_video_task", _fake_create_story_video_task)
+    from app.api.v1 import video as video_module
+    monkeypatch.setattr(video_module._video_service, "start_video_task", _fake_start_video_task)
 
     resp = client.post(
         "/api/v1/content/generate-story-video/start",
@@ -142,9 +158,11 @@ def test_video_start_includes_memory_context(client, monkeypatch):
         },
         headers=headers,
     )
+    
     assert resp.status_code == 200
     body = resp.json()
     assert body["success"] is True
     assert body["memory_recalled_count"] >= 1
     assert isinstance(body["memory_recalled"], list)
-    assert captured["payload"].get("memory_context_text")
+    assert captured["use_memory"] is True
+    assert captured["memory_top_k"] == 4

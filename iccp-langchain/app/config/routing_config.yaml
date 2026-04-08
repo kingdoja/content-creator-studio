@@ -1,0 +1,54 @@
+# 路由策略优先级配置
+# Requirements: 7.1
+#
+# 字段说明:
+#   name        - 策略类名（必填），合法值见下方列表
+#   agent       - 目标 Agent（必填），合法值: simple | react | reflection
+#   priority    - 优先级（必填），数字越小越先匹配
+#   enabled     - 是否启用（可选，默认 true）
+#   description - 描述（可选）
+#
+# 合法的策略名称:
+#   SimpleQAStrategy       - 简单问答/闲聊 → simple
+#   KnowledgeStrategy      - 需要知识库检索 → react
+#   RealtimeStrategy       - 需要实时数据   → react
+#   HighQualityStrategy    - 高复杂度+反思  → reflection
+#   MediumReflectionStrategy - 中等复杂度+反思 → reflection
+#   DefaultStrategy        - 兜底（必须存在且启用）→ react
+
+strategies:
+  - name: SimpleQAStrategy
+    agent: simple
+    priority: 10
+    enabled: true
+    description: 简单问答和闲聊场景，快速响应
+
+  - name: KnowledgeStrategy
+    agent: react
+    priority: 20
+    enabled: true
+    description: 需要知识库检索的场景，使用 ReActAgent + KnowledgeSearchTool
+
+  - name: RealtimeStrategy
+    agent: react
+    priority: 30
+    enabled: true
+    description: 需要实时数据的场景，使用 ReActAgent + 搜索工具
+
+  - name: HighQualityStrategy
+    agent: reflection
+    priority: 40
+    enabled: true
+    description: 高复杂度且需要深度反思的场景
+
+  - name: MediumReflectionStrategy
+    agent: reflection
+    priority: 50
+    enabled: true
+    description: 中等复杂度但仍需反思的场景
+
+  - name: DefaultStrategy
+    agent: react
+    priority: 100
+    enabled: true
+    description: 兜底策略，所有未匹配场景均路由到 ReActAgent
